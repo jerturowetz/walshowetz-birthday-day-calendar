@@ -4,17 +4,13 @@
 
 ## The Amazing Discovery That Started It All
 
-Picture this: Jeremy and Kate are heading out to an appointment, just casual conversation in the car, when Kate drops this completely random fun fact: "Oh hey, did you notice that all of our birthdays fell on the same day of the week this year?"
+Picture this: Jeremy and Kate are heading out to an appointment, just casual conversation en route, when Kate drops this completely random fun fact: "Oh hey, did you know that all of our birthdays fall on the same day of the week?"
 
 🤯 **Mind = Blown**
 
-That casual observation stopped Jeremy in his tracks. Wait... ALL of them? Jeremy, Kate, Waldo, AND Gus? What are the actual odds of that happening? Is this just a wild coincidence, or is there some beautiful mathematical pattern hiding in our family calendar?
-
-**Spoiler alert**: There IS a pattern, and it's absolutely mesmerizing to watch unfold over decades!
+Wait... ALL of them? Jeremy, Kate, Waldo, AND Gus? What are the actual odds of that happening? Is this just a wild coincidence, or is there some beautiful pattern hiding in our family calendar? Let's see!
 
 **Note**: This family site includes `noindex, nofollow` meta tags to keep our birthday secrets private from search engines. 😉
-
-![Birthday Timeline Preview](https://via.placeholder.com/800x400/f8f9fa/333?text=Birthday+Timeline+Visualization)
 
 ## ✨ What You'll Discover
 
