@@ -1,5 +1,7 @@
 # 🎂 The Walshowetz Birthday Time Machine
 
+🎆 **[🌐 View Live Site](https://jerturowetz.github.io/walshowetz-birthday-day-calendar)** 🎆
+
 ## The Amazing Discovery That Started It All
 
 Picture this: You're sitting around the dinner table and someone mentions, "Hey, didn't Jeremy's birthday fall on the same day of the week as Kate's this year?" And then you realize... wait... Waldo's birthday ALSO fell on the same weekday! And Gus too?!
@@ -48,11 +50,14 @@ For linting, formatting, and enhanced development tools, see [DEVELOPMENT.md](DE
 
 ### GitHub Pages Deployment
 
-This project is ready for GitHub Pages! Simply:
+This project is ready for GitHub Pages! The live site is already deployed at:
 
-1. **Push to GitHub**: Upload all files to a GitHub repository
+🌐 **https://jerturowetz.github.io/walshowetz-birthday-day-calendar**
+
+To deploy your own version:
+1. **Fork this repository** or create your own
 2. **Enable Pages**: Go to repository Settings → Pages → Source → Deploy from a branch → main
-3. **Wait a few minutes**: Your site will be available at `https://yourusername.github.io/birthday-map`
+3. **Wait a few minutes**: Your site will be live!
 
 ## 📁 Project Structure
 
