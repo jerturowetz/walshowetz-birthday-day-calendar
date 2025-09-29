@@ -1,0 +1,12 @@
+# Local development server
+# No external dependencies needed - uses Python's built-in http.server
+
+# Optional: For enhanced development
+# prettier (install via npm for HTML/CSS/JS formatting)
+# live-server (install via npm for auto-reload during development)
+
+# To install optional tools:
+# npm install -g prettier live-server
+
+# Python version: 3.7+
+# Built-in modules used: http.server, socketserver, os, sys

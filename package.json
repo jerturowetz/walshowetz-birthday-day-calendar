@@ -1,0 +1,57 @@
+{
+  "name": "walshowetz-birthday-day-calendar",
+  "version": "1.0.0",
+  "description": "Interactive birthday day calendar showing weekday patterns for the Walshowetz family",
+  "private": true,
+  "scripts": {
+    "serve": "python3 serve.py",
+    "dev": "live-server --port=8000 --open=/",
+    "format": "prettier --write \"*.html\" \"*.js\" \"*.md\" \"*.json\"",
+    "format:check": "prettier --check \"*.html\" \"*.js\" \"*.md\" \"*.json\"",
+    "lint:html": "htmlhint *.html",
+    "lint:js": "jshint generate-data.js",
+    "lint": "npm run lint:html && npm run lint:js",
+    "validate": "npm run format:check && npm run lint"
+  },
+  "devDependencies": {
+    "prettier": "^3.0.0",
+    "htmlhint": "^1.1.4",
+    "jshint": "^2.13.6",
+    "live-server": "^1.2.2"
+  },
+  "prettier": {
+    "semi": true,
+    "singleQuote": true,
+    "tabWidth": 2,
+    "trailingComma": "es5",
+    "printWidth": 80
+  },
+  "jshintConfig": {
+    "esversion": 6,
+    "browser": true,
+    "node": true,
+    "strict": false,
+    "globals": {
+      "d3": false
+    }
+  },
+  "htmlhintConfig": {
+    "doctype-first": false,
+    "title-require": true,
+    "alt-require": true,
+    "attr-lowercase": true,
+    "attr-value-double-quotes": true,
+    "id-unique": true,
+    "src-not-empty": true,
+    "tag-pair": true
+  },
+  "keywords": [
+    "visualization",
+    "d3js",
+    "birthday",
+    "timeline",
+    "family"
+  ],
+  "author": "Walshowetz Family",
+  "license": "MIT"
+}

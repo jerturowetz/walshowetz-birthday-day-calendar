@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Walshowetz Birthday Time Visualizer</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <style>
+        .tooltip {
+            position: absolute;
+            padding: 8px;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border-radius: 4px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .birthday-dot {
+            cursor: pointer;
+            transition: r 0.2s;
+        }
+
+        .birthday-dot:hover {
+            stroke: #000;
+            stroke-width: 2px;
+        }
+
+        .weekday-label {
+            font-size: 10px;
+            text-anchor: middle;
+            pointer-events: none;
+            fill: #333;
+        }
+
+        .leap-year-line {
+            stroke: #dc2626;
+            stroke-width: 2;
+            opacity: 0.8;
+        }
+
+        .year-grid-line {
+            stroke: #e5e7eb;
+            stroke-width: 1;
+            opacity: 0.6;
+        }
+
+        .axis-label {
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .x-axis-months .tick line {
+            stroke: #f0f0f0;
+            stroke-width: 1;
+        }
+
+        .x-axis-months .domain {
+            display: none;
+        }
+
+        .x-axis-years .domain {
+            stroke: #333;
+            stroke-width: 1;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">🎂 Walshowetz Birthday Time Visualizer</h1>
+            <p class="text-gray-600 max-w-2xl mx-auto">
+                Interactive timeline showing birthdays from birth year through 2099.
+                Each dot represents a birthday, colored by person and labeled with the day of the week.
+            </p>
+        </header>
+
+        <!-- Controls -->
+        <div class="bg-white rounded-lg shadow-md p-4 mb-6 relative">
+            <!-- Left Navigation Arrow -->
+            <button id="scrollLeft" class="absolute left-4 top-1/2 transform -translate-y-1/2 bg-gray-100 hover:bg-gray-200 border rounded-full p-3 shadow-sm">
+                ⬅️
+            </button>
+
+            <!-- Right Navigation Arrow -->
+            <button id="scrollRight" class="absolute right-4 top-1/2 transform -translate-y-1/2 bg-gray-100 hover:bg-gray-200 border rounded-full p-3 shadow-sm">
+                ➡️
+            </button>
+
+            <div class="flex items-center justify-center gap-4 mx-16">
+                <!-- Zoom Controls -->
+                <div class="flex items-center gap-2">
+                    <button id="zoomOut" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded text-sm font-medium">
+                        🔍➖ Zoom Out
+                    </button>
+                    <span id="zoomLevel" class="text-sm text-gray-600 min-w-[80px] text-center">67%</span>
+                    <button id="zoomIn" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded text-sm font-medium">
+                        🔍➕ Zoom In
+                    </button>
+                </div>
+
+                <!-- Navigation Speed -->
+                <div class="flex items-center gap-2">
+                    <label class="text-sm text-gray-600">Scroll Speed:</label>
+                    <select id="scrollSpeed" class="border rounded px-2 py-1 text-sm">
+                        <option value="1">Slow</option>
+                        <option value="2" selected>Normal</option>
+                        <option value="4">Fast</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visualization Container -->
+        <div class="bg-white rounded-lg shadow-md p-0 mb-6">
+            <!-- Chart Container with Static Y-axis -->
+            <div class="flex">
+                <!-- Static Y-axis -->
+                <div id="yAxisContainer" class="flex-shrink-0 bg-white border-r" style="width: 80px;"></div>
+
+                <!-- Scrollable Chart Area -->
+                <div id="chartScrollContainer" class="overflow-x-auto overflow-y-hidden flex-grow" style="max-height: 600px;">
+                    <div id="chart" class="min-w-max"></div>
+                </div>
+            </div>
+        </div>
+
+		<!-- Legend and Instructions -->
+		<div class="bg-white rounded-lg shadow-md p-6">
+			<div id="legend" class="flex flex-wrap gap-4 justify-center"></div>
+
+			<!-- Instructions -->
+			<div class="text-center text-gray-600 text-xs pt-4">
+				<p>🔍 Hover over dots for details • 📅 Red lines mark leap years • 📜 Scroll or use arrow buttons to navigate</p>
+			</div>
+		</div>
+
+    </div>
+
+    <!-- Tooltip -->
+    <div id="tooltip" class="tooltip"></div>
+
+    <script>
+        let data = null;
+        let svg = null;
+        let g = null;
+        let yAxisSvg = null;
+        let xScale = null;
+        let yScale = null;
+        let currentZoom = 0.67; // Start zoomed out more
+        let basePixelsPerMonth = 25;
+
+        const margin = { top: 40, right: 40, bottom: 80, left: 0 }; // No left margin since Y-axis is separate
+        const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        // Load data and initialize
+        d3.json('data.json').then(function(loadedData) {
+            data = loadedData;
+            console.log('Loaded data:', data.meta);
+
+            // Add month information to data
+            data.birthdays.forEach(d => {
+                const date = new Date(d.date);
+                d.month = date.getMonth(); // 0-indexed
+                d.monthYear = d.year + (d.month / 12); // Decimal representation for positioning
+            });
+
+            createLegend();
+            initializeChart();
+            renderFullTimeline();
+            setupControls();
+        }).catch(function(error) {
+            console.error('Error loading data:', error);
+            document.getElementById('chart').innerHTML = '<p class="text-red-500 text-center">Error loading data. Please check the console for details.</p>';
+        });
+
+        function createLegend() {
+            const legend = d3.select('#legend');
+
+            const legendItems = legend.selectAll('.legend-item')
+                .data(data.people)
+                .enter()
+                .append('div')
+                .attr('class', 'legend-item flex items-center gap-2');
+
+            legendItems.append('div')
+                .style('width', '18px')
+                .style('height', '18px')
+                .style('background-color', d => d.color)
+                .style('border-radius', '50%')
+                .style('border', '2px solid #fff')
+                .style('box-shadow', '0 2px 4px rgba(0,0,0,0.1)');
+
+            legendItems.append('span')
+                .text(d => d.name)
+                .attr('class', 'text-sm text-gray-700');
+        }
+
+
+        function initializeChart() {
+            const totalYears = data.meta.yearRange[1] - data.meta.yearRange[0] + 1;
+            const monthsPerYear = 12;
+            const height = 350 - margin.top - margin.bottom; // Reduced height
+            const totalSvgHeight = height + margin.top + margin.bottom;
+
+            // Create Y-axis scales
+            yScale = d3.scaleBand()
+                .domain(weekdays)
+                .range([0, height])
+                .padding(0.1);
+
+            // Create static Y-axis SVG
+            yAxisSvg = d3.select('#yAxisContainer')
+                .append('svg')
+                .attr('width', 80)
+                .attr('height', totalSvgHeight);
+
+            const yAxisGroup = yAxisSvg.append('g')
+                .attr('transform', `translate(70, ${margin.top})`);
+
+            const yAxis = d3.axisLeft(yScale);
+            yAxisGroup.call(yAxis);
+
+            // Add Y-axis label with more spacing
+            yAxisSvg.append('text')
+                .attr('class', 'axis-label')
+                .attr('text-anchor', 'middle')
+                .attr('transform', `translate(25, ${totalSvgHeight / 2}) rotate(-90)`)
+                .text('Day of Week');
+
+            // Create main timeline
+            updateTimelineSize();
+        }
+
+        function updateTimelineSize() {
+            const totalYears = data.meta.yearRange[1] - data.meta.yearRange[0] + 1;
+            const monthsPerYear = 12;
+            const pixelsPerMonth = basePixelsPerMonth * currentZoom;
+            const totalWidth = totalYears * monthsPerYear * pixelsPerMonth;
+            const height = 350 - margin.top - margin.bottom; // Match the Y-axis height
+            const totalSvgHeight = height + margin.top + margin.bottom;
+
+            // Remove existing SVG if it exists
+            d3.select('#chart svg').remove();
+
+            // Create new SVG with updated width
+            svg = d3.select('#chart')
+                .append('svg')
+                .attr('width', totalWidth + margin.left + margin.right)
+                .attr('height', totalSvgHeight);
+
+            // Create main group
+            g = svg.append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            // Update scales
+            xScale = d3.scaleLinear()
+                .domain([data.meta.yearRange[0], data.meta.yearRange[1] + 1])
+                .range([0, totalWidth]);
+
+            // Create axes groups
+            g.append('g')
+                .attr('class', 'x-axis-months')
+                .attr('transform', `translate(0,${height})`);
+
+            g.append('g')
+                .attr('class', 'x-axis-years')
+                .attr('transform', `translate(0,${height + 25})`);
+
+            // Add axis label
+            svg.append('text')
+                .attr('class', 'axis-label')
+                .attr('text-anchor', 'middle')
+                .attr('x', (totalWidth + margin.left + margin.right) / 2)
+                .attr('y', totalSvgHeight - 10)
+                .text(`Timeline (2019 - 2099) - Zoom: ${Math.round(currentZoom * 100)}%`);
+        }
+
+        function setupControls() {
+            const scrollContainer = document.getElementById('chartScrollContainer');
+
+            // Zoom controls
+            document.getElementById('zoomIn').addEventListener('click', () => {
+                if (currentZoom < 4) {
+                    currentZoom *= 1.5;
+                    updateZoom();
+                }
+            });
+
+            document.getElementById('zoomOut').addEventListener('click', () => {
+                if (currentZoom > 0.25) {
+                    currentZoom /= 1.5;
+                    updateZoom();
+                }
+            });
+
+            // Navigation arrows
+            document.getElementById('scrollLeft').addEventListener('click', () => {
+                const scrollSpeed = parseInt(document.getElementById('scrollSpeed').value);
+                const scrollAmount = 200 * scrollSpeed;
+                scrollContainer.scrollBy({
+                    left: -scrollAmount,
+                    behavior: 'smooth'
+                });
+            });
+
+            document.getElementById('scrollRight').addEventListener('click', () => {
+                const scrollSpeed = parseInt(document.getElementById('scrollSpeed').value);
+                const scrollAmount = 200 * scrollSpeed;
+                scrollContainer.scrollBy({
+                    left: scrollAmount,
+                    behavior: 'smooth'
+                });
+            });
+
+            // Keyboard navigation
+            document.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+                const scrollSpeed = parseInt(document.getElementById('scrollSpeed').value);
+                const scrollAmount = 100 * scrollSpeed;
+
+                switch(e.key) {
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        scrollContainer.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+                        break;
+                    case 'ArrowRight':
+                        e.preventDefault();
+                        scrollContainer.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+                        break;
+                    case '+':
+                    case '=':
+                        e.preventDefault();
+                        document.getElementById('zoomIn').click();
+                        break;
+                    case '-':
+                        e.preventDefault();
+                        document.getElementById('zoomOut').click();
+                        break;
+                }
+            });
+        }
+
+        function updateZoom() {
+            document.getElementById('zoomLevel').textContent = `${Math.round(currentZoom * 100)}%`;
+            updateTimelineSize();
+            renderFullTimeline();
+        }
+
+        function renderFullTimeline() {
+            if (!data || !svg) return;
+
+            const startYear = data.meta.yearRange[0];
+            const endYear = data.meta.yearRange[1];
+
+            // Create month ticks for the entire timeline
+            const monthTicks = [];
+            const yearTicks = [];
+            for (let year = startYear; year <= endYear; year++) {
+                yearTicks.push(year);
+                for (let month = 0; month < 12; month++) {
+                    monthTicks.push({
+                        value: year + (month / 12),
+                        month: month,
+                        year: year,
+                        label: monthNames[month]
+                    });
+                }
+            }
+
+            // Always show ALL years - no filtering!
+            const showMonths = currentZoom >= 1.5;
+
+            // Create year axis - show EVERY year
+            const xAxisYears = d3.axisBottom(xScale)
+                .tickValues(yearTicks) // Show ALL years
+                .tickFormat(d3.format('d'))
+                .tickSize(10);
+
+            // Render year axis
+            g.select('.x-axis-years')
+                .call(xAxisYears)
+                .selectAll('text')
+                .style('font-size', Math.max(9, Math.min(14, 11 * currentZoom)) + 'px')
+                .style('font-weight', 'bold');
+
+            // Handle month axis based on zoom level
+            if (showMonths) {
+                // Show months when zoomed in enough
+                let monthTickFreq = Math.max(1, Math.floor(3 / currentZoom));
+
+                const xAxisMonths = d3.axisBottom(xScale)
+                    .tickValues(monthTicks.filter((d, i) => i % monthTickFreq === 0).map(d => d.value))
+                    .tickFormat((d, i) => {
+                        const tickIndex = i * monthTickFreq;
+                        const tick = monthTicks[tickIndex];
+                        return tick ? tick.label : '';
+                    })
+                    .tickSize(-yScale.range()[1])
+                    .tickSizeOuter(0);
+
+                g.select('.x-axis-months')
+                    .style('opacity', 1)
+                    .call(xAxisMonths)
+                    .selectAll('text')
+                    .style('font-size', Math.max(8, Math.min(12, 9 * currentZoom)) + 'px')
+                    .attr('dy', '12px');
+            } else {
+                // Hide months when zoomed out
+                g.select('.x-axis-months')
+                    .style('opacity', 0)
+                    .selectAll('*').remove();
+            }
+
+            // Add year grid lines for all years
+            g.selectAll('.year-grid-line')
+                .data(yearTicks)
+                .enter()
+                .append('line')
+                .attr('class', 'year-grid-line')
+                .attr('x1', d => xScale(d))
+                .attr('x2', d => xScale(d))
+                .attr('y1', 0)
+                .attr('y2', yScale.range()[1]);
+
+            // Add leap year markers (red lines, always visible)
+            g.selectAll('.leap-year-line')
+                .data(data.leapYears)
+                .enter()
+                .append('line')
+                .attr('class', 'leap-year-line')
+                .attr('x1', d => xScale(d))
+                .attr('x2', d => xScale(d))
+                .attr('y1', 0)
+                .attr('y2', yScale.range()[1]);
+
+            // Calculate dot size based on zoom - even bigger visualization dots
+            const dotSize = Math.max(5, Math.min(15, 8 * currentZoom));
+
+            // Add birthday dots
+            g.selectAll('.birthday-dot')
+                .data(data.birthdays)
+                .enter()
+                .append('circle')
+                .attr('class', 'birthday-dot')
+                .attr('cx', d => xScale(d.monthYear))
+                .attr('cy', d => yScale(d.weekday) + yScale.bandwidth() / 2)
+                .attr('r', dotSize)
+                .attr('fill', d => d.color)
+                .on('mouseover', function(event, d) {
+                    // Larger dot on hover
+                    d3.select(this).attr('r', dotSize * 1.5);
+
+                    const tooltip = d3.select('#tooltip');
+                    tooltip.style('opacity', 1);
+                    tooltip.html(`
+                        <strong>${d.person}</strong><br/>
+                        ${d.date}<br/>
+                        ${d.weekday}${d.isLeapYear ? ' (Leap Year)' : ''}
+                    `)
+                    .style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 10) + 'px');
+                })
+                .on('mouseout', function() {
+                    // Reset dot size
+                    d3.select(this).attr('r', dotSize);
+
+                    d3.select('#tooltip').style('opacity', 0);
+                });
+
+            // Add weekday labels for high zoom levels
+            if (currentZoom >= 2) {
+                g.selectAll('.weekday-label')
+                    .data(data.birthdays)
+                    .enter()
+                    .append('text')
+                    .attr('class', 'weekday-label')
+                    .attr('x', d => xScale(d.monthYear))
+                    .attr('y', d => yScale(d.weekday) + yScale.bandwidth() / 2 + 3)
+                    .text(d => d.weekdayShort)
+                    .style('font-size', Math.max(6, Math.min(10, 8 * currentZoom)) + 'px');
+            }
+        }
+
+    </script>
+</body>
+</html>
